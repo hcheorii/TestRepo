@@ -61,6 +61,18 @@ async function startServer() {
     try {
         await connectDB();
         console.log("데이터베이스 연결 성공");
+
+        // 데이터베이스 초기화 시도
+        try {
+            const { initializeDatabase } = require("./database/init");
+            await initializeDatabase();
+            console.log("데이터베이스 테이블 초기화 완료");
+        } catch (initError) {
+            console.warn(
+                "데이터베이스 초기화 건너뜀 (이미 초기화되었거나 권한 없음):",
+                initError.message
+            );
+        }
     } catch (error) {
         console.error("데이터베이스 연결 실패:", error);
         console.log(

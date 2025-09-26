@@ -6,9 +6,6 @@ async function initializeDatabase() {
     try {
         console.log("데이터베이스 초기화를 시작합니다...");
 
-        // 데이터베이스 연결
-        await connectDB();
-
         // 스키마 파일 읽기
         const schemaPath = path.join(__dirname, "schema.sql");
         const schemaSQL = fs.readFileSync(schemaPath, "utf8");
@@ -27,9 +24,7 @@ async function initializeDatabase() {
         console.log("데이터베이스 초기화가 완료되었습니다.");
     } catch (error) {
         console.error("데이터베이스 초기화 실패:", error);
-        process.exit(1);
-    } finally {
-        await closeConnection();
+        throw error; // 에러를 다시 던져서 상위에서 처리
     }
 }
 
