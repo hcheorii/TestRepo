@@ -95,17 +95,20 @@ npm run dev
 
 ## Railway 배포
 
+⚠️ **PostgreSQL 연결 오류가 발생한다면 `RAILWAY_SETUP.md` 파일을 참고하세요.**
+
 ### 1. Railway 계정 및 프로젝트 생성
 
 1. [Railway](https://railway.app)에 가입
 2. 새 프로젝트 생성
 3. GitHub 저장소 연결
 
-### 2. PostgreSQL 서비스 추가
+### 2. PostgreSQL 서비스 추가 (중요!)
 
 1. Railway 대시보드에서 "Add Service" 클릭
 2. "PostgreSQL" 선택
 3. 자동으로 `DATABASE_URL` 환경변수가 설정됩니다
+4. **이 단계를 빼먹으면 `ECONNREFUSED` 오류가 발생합니다**
 
 ### 3. 환경 변수 설정
 

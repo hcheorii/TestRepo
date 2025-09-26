@@ -51,17 +51,25 @@ app.use("*", (req, res) => {
 
 // 서버 시작
 async function startServer() {
+    // 먼저 서버를 시작하고 데이터베이스는 나중에 연결 시도
+    app.listen(PORT, () => {
+        console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
+        console.log(`API 문서: http://localhost:${PORT}`);
+    });
+
+    // 데이터베이스 연결 시도 (실패해도 서버는 계속 실행)
     try {
         await connectDB();
         console.log("데이터베이스 연결 성공");
-
-        app.listen(PORT, () => {
-            console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-            console.log(`API 문서: http://localhost:${PORT}`);
-        });
     } catch (error) {
-        console.error("서버 시작 실패:", error);
-        process.exit(1);
+        console.error("데이터베이스 연결 실패:", error);
+        console.log(
+            "데이터베이스 없이 서버가 실행됩니다. Railway에서 PostgreSQL 서비스를 추가해주세요."
+        );
+        console.log(
+            "환경변수 확인: DATABASE_URL =",
+            process.env.DATABASE_URL ? "설정됨" : "설정되지 않음"
+        );
     }
 }
 

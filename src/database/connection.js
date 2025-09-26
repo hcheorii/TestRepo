@@ -6,6 +6,7 @@ let pool;
 function createPool() {
     // Railway에서는 DATABASE_URL을 제공하므로 우선적으로 사용
     if (process.env.DATABASE_URL) {
+        console.log("DATABASE_URL을 사용하여 PostgreSQL에 연결합니다...");
         return new Pool({
             connectionString: process.env.DATABASE_URL,
             ssl:
@@ -16,13 +17,17 @@ function createPool() {
     }
 
     // 로컬 개발환경용 설정
-    return new Pool({
+    console.log("로컬 환경변수를 사용하여 PostgreSQL에 연결합니다...");
+    const config = {
         host: process.env.DB_HOST || "localhost",
-        port: process.env.DB_PORT || 5432,
+        port: parseInt(process.env.DB_PORT) || 5432,
         database: process.env.DB_NAME || "document_api",
         user: process.env.DB_USER || "postgres",
         password: process.env.DB_PASSWORD || "password",
-    });
+    };
+
+    console.log(`연결 정보: ${config.host}:${config.port}/${config.database}`);
+    return new Pool(config);
 }
 
 // 데이터베이스 연결 함수

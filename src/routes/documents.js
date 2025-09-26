@@ -4,11 +4,32 @@ const fs = require("fs");
 const { query } = require("../database/connection");
 const { upload, handleUploadError } = require("../config/multer");
 
+// 데이터베이스 연결 확인 미들웨어
+const checkDatabaseConnection = async (req, res, next) => {
+    try {
+        await query("SELECT 1");
+        next();
+    } catch (error) {
+        console.error("데이터베이스 연결 확인 실패:", error);
+        res.status(503).json({
+            error: "데이터베이스 서비스를 사용할 수 없습니다.",
+            message:
+                "Railway에서 PostgreSQL 서비스가 설정되지 않았거나 연결할 수 없습니다.",
+            instructions: [
+                "1. Railway 대시보드에서 PostgreSQL 서비스를 추가해주세요.",
+                "2. DATABASE_URL 환경변수가 자동으로 설정되었는지 확인해주세요.",
+                "3. 배포 후 데이터베이스 초기화: npm run init-db",
+            ],
+        });
+    }
+};
+
 const router = express.Router();
 
 // 문서 업로드 API
 router.post(
     "/upload",
+    checkDatabaseConnection,
     upload.single("document"),
     handleUploadError,
     async (req, res) => {
@@ -102,7 +123,7 @@ router.post(
 );
 
 // 문서 목록 조회 API
-router.get("/", async (req, res) => {
+router.get("/", checkDatabaseConnection, async (req, res) => {
     try {
         const {
             page = 1,
@@ -243,7 +264,7 @@ router.get("/", async (req, res) => {
 });
 
 // 특정 문서 조회 API
-router.get("/:id", async (req, res) => {
+router.get("/:id", checkDatabaseConnection, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -305,7 +326,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // 문서 이미지 조회 API (직접 파일 스트림 제공)
-router.get("/:id/image", async (req, res) => {
+router.get("/:id/image", checkDatabaseConnection, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -369,7 +390,7 @@ router.get("/:id/image", async (req, res) => {
 });
 
 // 문서 삭제 API (소프트 삭제)
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", checkDatabaseConnection, async (req, res) => {
     try {
         const { id } = req.params;
 
