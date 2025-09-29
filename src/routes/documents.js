@@ -53,13 +53,16 @@ router.post(
             let decodedOriginalName;
             try {
                 // 브라우저에서 전송된 파일명이 잘못 인코딩된 경우를 처리
-                decodedOriginalName = Buffer.from(originalname, 'latin1').toString('utf8');
+                decodedOriginalName = Buffer.from(
+                    originalname,
+                    "latin1"
+                ).toString("utf8");
                 // UTF-8 디코딩 결과가 유효하지 않으면 원본 사용
-                if (decodedOriginalName.includes('�')) {
+                if (decodedOriginalName.includes("�")) {
                     decodedOriginalName = originalname;
                 }
             } catch (error) {
-                console.log('파일명 디코딩 실패, 원본 사용:', originalname);
+                console.log("파일명 디코딩 실패, 원본 사용:", originalname);
                 decodedOriginalName = originalname;
             }
 
