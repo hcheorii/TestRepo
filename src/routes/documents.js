@@ -49,6 +49,20 @@ router.post(
             } = req.file;
             const { description, tags } = req.body;
 
+            // 한글 파일명 인코딩 문제 해결
+            let decodedOriginalName;
+            try {
+                // 브라우저에서 전송된 파일명이 잘못 인코딩된 경우를 처리
+                decodedOriginalName = Buffer.from(originalname, 'latin1').toString('utf8');
+                // UTF-8 디코딩 결과가 유효하지 않으면 원본 사용
+                if (decodedOriginalName.includes('�')) {
+                    decodedOriginalName = originalname;
+                }
+            } catch (error) {
+                console.log('파일명 디코딩 실패, 원본 사용:', originalname);
+                decodedOriginalName = originalname;
+            }
+
             // 태그 처리 (문자열을 배열로 변환)
             let tagsArray = [];
             if (tags) {
@@ -73,7 +87,7 @@ router.post(
 
             const result = await query(insertQuery, [
                 filename,
-                originalname,
+                decodedOriginalName,
                 `/uploads/${filename}`,
                 size,
                 mimetype,
@@ -359,7 +373,7 @@ router.get("/:id/image", checkDatabaseConnection, async (req, res) => {
         res.setHeader("Content-Type", mime_type);
         res.setHeader(
             "Content-Disposition",
-            `inline; filename="${encodeURIComponent(original_filename)}"`
+            `inline; filename*=UTF-8''${encodeURIComponent(original_filename)}`
         );
 
         // 파일 스트림 생성 및 전송
