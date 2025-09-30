@@ -374,6 +374,17 @@ router.get("/:id/image", checkDatabaseConnection, async (req, res) => {
 
         // 파일 정보 설정
         res.setHeader("Content-Type", mime_type);
+        res.setHeader("Access-Control-Allow-Origin", "*");
+
+        // PDF 파일인 경우 특별한 처리
+        if (mime_type === "application/pdf") {
+            res.setHeader("X-Frame-Options", "SAMEORIGIN"); // iframe 허용
+            res.setHeader(
+                "Content-Security-Policy",
+                "frame-ancestors 'self' *"
+            ); // CSP 설정
+        }
+
         res.setHeader(
             "Content-Disposition",
             `inline; filename*=UTF-8''${encodeURIComponent(original_filename)}`

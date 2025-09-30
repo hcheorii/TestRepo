@@ -11,7 +11,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 미들웨어 설정
-app.use(cors());
+app.use(cors({
+    origin: true, // 모든 오리진 허용 (개발용)
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -24,8 +29,17 @@ app.use((req, res, next) => {
     next();
 });
 
-// 정적 파일 제공 (업로드된 이미지용)
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// 정적 파일 제공 (업로드된 파일용)
+app.use("/uploads", (req, res, next) => {
+    // PDF 파일에 대한 특별한 헤더 설정
+    if (req.path.toLowerCase().endsWith('.pdf')) {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('X-Frame-Options', 'SAMEORIGIN'); // iframe 허용
+        res.setHeader('Content-Disposition', 'inline'); // 브라우저에서 직접 보기
+    }
+    next();
+}, express.static(path.join(__dirname, "../uploads")));
 
 // 라우트 설정
 app.use("/api/documents", documentRoutes);

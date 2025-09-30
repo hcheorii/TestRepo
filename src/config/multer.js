@@ -25,8 +25,10 @@ const storage = multer.diskStorage({
 const fileFilter = (req, file, cb) => {
     const allowedTypes = (
         process.env.ALLOWED_FILE_TYPES ||
-        "image/jpeg,image/png,image/gif,application/pdf"
+        "image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf"
     ).split(",");
+
+    console.log(`업로드 파일 타입: ${file.mimetype}, 원본 파일명: ${file.originalname}`);
 
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
