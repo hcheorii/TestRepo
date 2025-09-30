@@ -396,11 +396,18 @@ router.get("/:id/image", checkDatabaseConnection, async (req, res) => {
 
         // PDF 파일인 경우 특별한 처리
         if (mime_type === "application/pdf") {
-            res.setHeader("X-Frame-Options", "SAMEORIGIN"); // iframe 허용
+            res.setHeader("X-Frame-Options", "ALLOWALL"); // iframe 허용을 더 관대하게
             res.setHeader(
                 "Content-Security-Policy",
-                "frame-ancestors 'self' *"
-            ); // CSP 설정
+                "default-src 'self' 'unsafe-inline' 'unsafe-eval' *; frame-ancestors *;"
+            ); // CSP 설정 완화
+            res.setHeader("X-Content-Type-Options", "nosniff"); // MIME 타입 보안
+            res.setHeader(
+                "Cache-Control",
+                "no-cache, no-store, must-revalidate"
+            ); // 캐시 제어
+            res.setHeader("Pragma", "no-cache");
+            res.setHeader("Expires", "0");
         }
 
         res.setHeader(

@@ -35,8 +35,13 @@ app.use("/uploads", (req, res, next) => {
     if (req.path.toLowerCase().endsWith('.pdf')) {
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('X-Frame-Options', 'SAMEORIGIN'); // iframe 허용
+        res.setHeader('X-Frame-Options', 'ALLOWALL'); // iframe 허용을 더 관대하게
+        res.setHeader('Content-Security-Policy', 'default-src *; frame-ancestors *;'); // CSP 완화
         res.setHeader('Content-Disposition', 'inline'); // 브라우저에서 직접 보기
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
     }
     next();
 }, express.static(path.join(__dirname, "../uploads")));
