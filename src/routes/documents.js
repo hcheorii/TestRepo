@@ -394,20 +394,19 @@ router.get("/:id/image", checkDatabaseConnection, async (req, res) => {
         res.setHeader("Content-Type", mime_type);
         res.setHeader("Access-Control-Allow-Origin", "*");
 
-        // PDF 파일인 경우 특별한 처리
+        // PDF 파일인 경우 특별한 처리 (Chrome 차단 방지)
         if (mime_type === "application/pdf") {
-            res.setHeader("X-Frame-Options", "ALLOWALL"); // iframe 허용을 더 관대하게
-            res.setHeader(
-                "Content-Security-Policy",
-                "default-src 'self' 'unsafe-inline' 'unsafe-eval' *; frame-ancestors *;"
-            ); // CSP 설정 완화
-            res.setHeader("X-Content-Type-Options", "nosniff"); // MIME 타입 보안
-            res.setHeader(
-                "Cache-Control",
-                "no-cache, no-store, must-revalidate"
-            ); // 캐시 제어
-            res.setHeader("Pragma", "no-cache");
-            res.setHeader("Expires", "0");
+            // MIME 타입을 속여서 Chrome 차단 우회
+            res.setHeader("Content-Type", "application/octet-stream");
+            // 모든 제한적인 헤더 제거
+            res.removeHeader("X-Frame-Options");
+            res.removeHeader("X-Content-Type-Options");
+            res.removeHeader("Content-Security-Policy");
+            res.removeHeader("X-Download-Options");
+            res.removeHeader("X-Permitted-Cross-Domain-Policies");
+            // 기본 헤더만 설정
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            res.setHeader("Cache-Control", "no-cache");
         }
 
         res.setHeader(
@@ -437,6 +436,134 @@ router.get("/:id/image", checkDatabaseConnection, async (req, res) => {
                     process.env.NODE_ENV === "development"
                         ? error.message
                         : undefined,
+            });
+        }
+    }
+});
+
+// PDF Base64 데이터 API (Chrome 차단 완전 우회)
+router.get("/:id/pdf-data", checkDatabaseConnection, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 데이터베이스에서 PDF 문서 정보 조회
+        const selectQuery = `
+      SELECT filename, mime_type, original_filename 
+      FROM documents 
+      WHERE id = $1 AND is_active = true AND mime_type = 'application/pdf'
+    `;
+
+        const result = await query(selectQuery, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "PDF 문서를 찾을 수 없습니다.",
+            });
+        }
+
+        const { filename, original_filename } = result.rows[0];
+        const filePath = path.join(__dirname, "../../uploads", filename);
+
+        // 파일 존재 확인
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({
+                error: "PDF 파일을 찾을 수 없습니다.",
+            });
+        }
+
+        // PDF 파일을 Base64로 읽기
+        const pdfBuffer = fs.readFileSync(filePath);
+        const pdfBase64 = pdfBuffer.toString("base64");
+
+        // JSON으로 응답 (Chrome이 차단할 수 없음)
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+        res.json({
+            success: true,
+            fileName: original_filename,
+            mimeType: "application/pdf",
+            data: `data:application/pdf;base64,${pdfBase64}`,
+            size: pdfBuffer.length,
+        });
+    } catch (error) {
+        console.error("PDF 데이터 조회 오류:", error);
+        res.status(500).json({
+            error: "PDF 데이터를 조회하는 중 오류가 발생했습니다.",
+        });
+    }
+});
+
+// PDF 전용 보기 API (Chrome 차단 방지)
+router.get("/:id/pdf", checkDatabaseConnection, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 데이터베이스에서 PDF 문서 정보 조회
+        const selectQuery = `
+      SELECT filename, mime_type, original_filename 
+      FROM documents 
+      WHERE id = $1 AND is_active = true AND mime_type = 'application/pdf'
+    `;
+
+        const result = await query(selectQuery, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "PDF 문서를 찾을 수 없습니다.",
+            });
+        }
+
+        const { filename, original_filename } = result.rows[0];
+        const filePath = path.join(__dirname, "../../uploads", filename);
+
+        // 파일 존재 확인
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({
+                error: "PDF 파일을 찾을 수 없습니다.",
+            });
+        }
+
+        // PDF 전용 헤더 설정 (가장 관대한 설정)
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader(
+            "Content-Disposition",
+            `inline; filename*=UTF-8''${encodeURIComponent(original_filename)}`
+        );
+
+        // 모든 보안 헤더 제거/완화
+        res.removeHeader("X-Frame-Options");
+        res.setHeader(
+            "Content-Security-Policy",
+            "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors *; object-src *;"
+        );
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
+
+        // 캐시 비활성화
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+
+        // 파일 스트림 생성 및 전송
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.on("error", (error) => {
+            console.error("PDF 스트림 오류:", error);
+            if (!res.headersSent) {
+                res.status(500).json({
+                    error: "PDF 파일을 읽는 중 오류가 발생했습니다.",
+                });
+            }
+        });
+
+        fileStream.pipe(res);
+    } catch (error) {
+        console.error("PDF 조회 오류:", error);
+        if (!res.headersSent) {
+            res.status(500).json({
+                error: "PDF를 조회하는 중 오류가 발생했습니다.",
             });
         }
     }

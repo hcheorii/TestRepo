@@ -11,40 +11,64 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 미들웨어 설정
-app.use(cors({
-    origin: true, // 모든 오리진 허용 (개발용)
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-}));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(
+    cors({
+        origin: true, // 모든 오리진 허용 (개발용)
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization",
+            "X-Requested-With",
+            "X-Frame-Options",
+        ],
+        exposedHeaders: ["Content-Type", "Content-Disposition"],
+    })
+);
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // 한글 파일명 처리를 위한 설정
 app.use((req, res, next) => {
-    if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+    if (
+        req.headers["content-type"] &&
+        req.headers["content-type"].includes("multipart/form-data")
+    ) {
         // multipart/form-data에서 파일명 인코딩 처리
-        req.encoding = 'utf8';
+        req.encoding = "utf8";
     }
     next();
 });
 
 // 정적 파일 제공 (업로드된 파일용)
-app.use("/uploads", (req, res, next) => {
-    // PDF 파일에 대한 특별한 헤더 설정
-    if (req.path.toLowerCase().endsWith('.pdf')) {
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('X-Frame-Options', 'ALLOWALL'); // iframe 허용을 더 관대하게
-        res.setHeader('Content-Security-Policy', 'default-src *; frame-ancestors *;'); // CSP 완화
-        res.setHeader('Content-Disposition', 'inline'); // 브라우저에서 직접 보기
-        res.setHeader('X-Content-Type-Options', 'nosniff');
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-    }
-    next();
-}, express.static(path.join(__dirname, "../uploads")));
+app.use(
+    "/uploads",
+    (req, res, next) => {
+        // PDF 파일에 대한 특별한 헤더 설정 (Chrome 차단 방지)
+        if (req.path.toLowerCase().endsWith(".pdf")) {
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            // X-Frame-Options 완전 제거
+            res.removeHeader("X-Frame-Options");
+            res.setHeader(
+                "Content-Security-Policy",
+                "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors *;"
+            );
+            res.setHeader("Content-Disposition", "inline");
+            res.setHeader("X-Content-Type-Options", "nosniff");
+            res.setHeader("X-Download-Options", "noopen");
+            res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+            res.setHeader(
+                "Cache-Control",
+                "no-cache, no-store, must-revalidate, private"
+            );
+            res.setHeader("Pragma", "no-cache");
+            res.setHeader("Expires", "0");
+        }
+        next();
+    },
+    express.static(path.join(__dirname, "../uploads"))
+);
 
 // 라우트 설정
 app.use("/api/documents", documentRoutes);
