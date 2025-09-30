@@ -88,6 +88,14 @@ router.post(
       RETURNING *
     `;
 
+            console.log(`파일 업로드 정보:`, {
+                filename,
+                decodedOriginalName,
+                filePath,
+                size,
+                mimetype,
+            });
+
             const result = await query(insertQuery, [
                 filename,
                 decodedOriginalName,
@@ -99,6 +107,7 @@ router.post(
             ]);
 
             const document = result.rows[0];
+            console.log(`데이터베이스 저장 완료:`, document);
 
             res.status(201).json({
                 message: "문서가 성공적으로 업로드되었습니다.",
@@ -348,6 +357,8 @@ router.get("/:id/image", checkDatabaseConnection, async (req, res) => {
         const { id } = req.params;
 
         // 데이터베이스에서 문서 정보 조회
+        console.log(`이미지 조회 요청 - ID: ${id}`);
+
         const selectQuery = `
       SELECT filename, mime_type, original_filename 
       FROM documents 
@@ -355,6 +366,7 @@ router.get("/:id/image", checkDatabaseConnection, async (req, res) => {
     `;
 
         const result = await query(selectQuery, [id]);
+        console.log(`데이터베이스 조회 결과:`, result.rows);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -365,10 +377,16 @@ router.get("/:id/image", checkDatabaseConnection, async (req, res) => {
         const { filename, mime_type, original_filename } = result.rows[0];
         const filePath = path.join(__dirname, "../../uploads", filename);
 
+        console.log(`파일 경로: ${filePath}`);
+        console.log(`파일 존재 여부: ${fs.existsSync(filePath)}`);
+
         // 파일 존재 확인
         if (!fs.existsSync(filePath)) {
+            console.log(`파일을 찾을 수 없음: ${filePath}`);
             return res.status(404).json({
                 error: "파일을 찾을 수 없습니다.",
+                filePath: filePath,
+                filename: filename,
             });
         }
 
